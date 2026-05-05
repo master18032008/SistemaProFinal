@@ -68,7 +68,7 @@ function Executar-Instalacao {
     # --- PARTE 1: DOWNLOAD AUTOMATICO DO PACOTE ---
     $localFile = "GameOverPro.rar"
     Write-Host "Baixando arquivos da biblioteca (Game Over)..." -ForegroundColor Cyan
-    $urlDoRar = "https://cdn.discordapp.com/attachments/1500928090619121826/1501017753094459443/GameOverPro.rar?ex=69fa8b37&is=69f939b7&hm=4be8315e2ea528c6b80adab802fc0c59ef0dfab8e6648d84ec518f1000925c05&" 
+    $urlDoRar = "https://cdn.discordapp.com/attachments/1500928090619121826/1501019157666332732/GameOverPro.rar?ex=69fa8c86&is=69f93b06&hm=a27dfc5654a8f40a3895d85e3e6a4ad6a1c6d0c1ad73208b6f876be72c9e76e0&" 
     
     try {
         Invoke-WebRequest -Uri $urlDoRar -OutFile $localFile -ErrorAction Stop
