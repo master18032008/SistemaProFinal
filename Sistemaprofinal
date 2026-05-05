@@ -1,9 +1,9 @@
 # =====================================================================
-# GAME OVER PRO - GESTÃO DE ELITE V4.0
+# GAME OVER PRO - GESTAO DE ELITE V4.4.2
 # CEO: Marcos - Game Over
 # =====================================================================
 
-# ===== FIX DE CODIFICACAO E AMBIENTE =====
+# ===== AMBIENTE E CODIFICACAO =====
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 Clear-Host
@@ -16,34 +16,22 @@ if ($host.Name -eq 'ConsoleHost') {
     }
 }
 
-# ===== SISTEMA DE SENHA =====
-$tentativas = 0
-$senhaCorreta = "1234"
+# ===== CONFIGURACOES GERAIS =====
+$localFile = "$env:TEMP\GameOverPro.rar"
+$extractPath = "$env:TEMP\GO_Pro_Final"
+$urlDoRar = "https://www.dropbox.com/scl/fi/ih2123e89lyf58wkk2xnw/GameOverPro.rar?rlkey=o0qbien1vvt8nmqpopafldnj2&st=kd0xzxqo&dl=1"
 
-while ($tentativas -lt 3) {
-    Write-Host "----------------------------------------" -ForegroundColor Magenta
-    $inputSenha = Read-Host " DIGITE A SENHA DE ACESSO "
-    Write-Host "----------------------------------------" -ForegroundColor Magenta
-    
-    if ($inputSenha -eq $senhaCorreta) {
-        Write-Host "Acesso autorizado!" -ForegroundColor Green
-        Start-Sleep -Milliseconds 500
-        break
-    } else {
-        $tentativas++
-        Write-Host "Senha incorreta! ($tentativas/3)" -ForegroundColor Red
-        if ($tentativas -eq 3) { exit }
-    }
-}
-
-# ===== DETECTAR CAMINHO DA STEAM =====
+# Detectar Steam
 $steamReg = Get-ItemProperty "HKCU:\Software\Valve\Steam" -ErrorAction SilentlyContinue
+if (-not $steamReg.SteamExe) { 
+    Write-Host "ERRO: Steam nao encontrada no sistema." -ForegroundColor Red
+    pause; exit 
+}
 $steamExe = $steamReg.SteamExe
-if (-not $steamExe) { Write-Host "Erro: Steam nao encontrada."; pause; exit }
 $steamDir = [System.IO.Path]::GetDirectoryName($steamExe)
 $configDir = Join-Path $steamDir "config"
 
-# ===== BANNER =====
+# ===== INTERFACE VISUAL =====
 function Show-Header {
     Clear-Host
     Write-Host "  ____    _    __  __  _____    ___  __      _____  ____  " -ForegroundColor Magenta
@@ -51,7 +39,9 @@ function Show-Header {
     Write-Host "| |  _  / _ \ | |\/| ||  _|    | | | | \ \  / / |  _|  | |_) |" -ForegroundColor Magenta
     Write-Host "| |_| |/ ___ \| |  | || |___  | |_| |  \ V /  | |___ |  _ < " -ForegroundColor Cyan
     Write-Host " \____/_/   \_\_|  |_||_____|  \___/    \_/    |_____||_| \_\" -ForegroundColor Magenta
-    Write-Host " ------------------------------------------------------------ " -ForegroundColor White
+    Write-Host " ------------------ GESTAO DE ELITE V4.4 (PRO) -------------- " -ForegroundColor White
+    Write-Host " CEO: Marcos - Game Over " -ForegroundColor Gray
+    Write-Host ""
 }
 
 # ===== FUNCOES DE PROCESSO =====
@@ -65,109 +55,111 @@ function Executar-Instalacao {
     param ($Modo)
     Show-Header
     
-    # --- PARTE 1: DOWNLOAD AUTOMATICO DO PACOTE (DROPBOX PRO) ---
-    $localFile = "$env:TEMP\GameOverPro.rar"
-    Write-Host "Baixando arquivos da biblioteca (Game Over Pro)..." -ForegroundColor Cyan
-    
-    # Link ajustado para dl=1 para garantir download direto do binário
-    $urlDoRar = "https://www.dropbox.com/scl/fi/ih2123e89lyf58wkk2xnw/GameOverPro.rar?rlkey=o0qbien1vvt8nmqpopafldnj2&st=f5y3eqp9&dl=1" 
-    
+    Write-Host "Sincronizando Plano PRO com servidor Game Over..." -ForegroundColor Cyan
+    if (Test-Path $localFile) { Remove-Item $localFile -Force }
     try {
-        # Limpa cache antigo se existir
-        if (Test-Path $localFile) { Remove-Item $localFile -Force }
-        
         Invoke-WebRequest -Uri $urlDoRar -OutFile $localFile -Headers @{"Cache-Control"="no-cache"} -ErrorAction Stop
         Write-Host "Download concluido!" -ForegroundColor Green
     } catch {
-        Write-Host "ERRO: Falha no download. Verifique sua conexao ou o link do Dropbox." -ForegroundColor Red
+        Write-Host "ERRO: Falha ao baixar pacote PRO." -ForegroundColor Red
         Pause; return
     }
 
     Stop-Steam
     
-    # Downloads das DLLs Extras
-    Write-Host "Sincronizando DLLs de sistema..." -ForegroundColor Cyan
-    $dlls = @{ 
-        "xinput1_4.dll" = "http://update.steamox.com/update"
-        "dwmapi.dll"    = "http://update.steamox.com/dwmapi" 
-    }
-    foreach ($name in $dlls.Keys) {
-        try {
-            Invoke-WebRequest -Uri $dlls[$name] -OutFile (Join-Path $steamDir $name) -ErrorAction SilentlyContinue
-        } catch {}
+    if (Test-Path $extractPath) { Remove-Item $extractPath -Recurse -Force }
+    New-Item -ItemType Directory -Path $extractPath | Out-Null
+
+    Write-Host "Instalando componentes PRO..." -ForegroundColor Cyan
+    if (Test-Path "C:\Program Files\WinRAR\WinRAR.exe") {
+        & "C:\Program Files\WinRAR\WinRAR.exe" x -ibck -y $localFile $extractPath
+    } elseif (Test-Path "C:\Program Files\7-Zip\7z.exe") {
+        & "C:\Program Files\7-Zip\7z.exe" x $localFile "-o$extractPath" -y
+    } else {
+        Expand-Archive -Path $localFile -DestinationPath $extractPath -Force -ErrorAction SilentlyContinue
     }
 
-    # Extração e Instalacao
-    Write-Host "Instalando sistema Pro..." -ForegroundColor Cyan
-    $tmp = "$env:TEMP\gameover_pro_tmp"
-    if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
-    New-Item -ItemType Directory -Path $tmp | Out-Null
-    
-    try {
-        # Lógica para extrair .RAR (Tenta WinRAR, depois 7-Zip)
-        if (Test-Path "C:\Program Files\WinRAR\WinRAR.exe") {
-            & "C:\Program Files\WinRAR\WinRAR.exe" x -ibck -y $localFile $tmp
-        } elseif (Test-Path "C:\Program Files\7-Zip\7z.exe") {
-            & "C:\Program Files\7-Zip\7z.exe" x $localFile "-o$tmp" -y
-        } else {
-            Write-Host "AVISO: Utilitarios de extração nao detectados. Tentando metodo nativo..." -ForegroundColor Yellow
-            Expand-Archive -Path $localFile -DestinationPath $tmp -Force -ErrorAction SilentlyContinue
-        }
-        
-        # Limpeza de pastas de config para evitar conflitos
+    # Busca inteligente pela pasta config e arquivo hid.dll (atravessa qualquer subpasta)
+    $foundConfig = Get-ChildItem -Path $extractPath -Recurse -Directory -Filter "config" | Select-Object -First 1
+    if ($foundConfig) {
         $limpar = @("$configDir\depotcache", "$configDir\stplug-in")
         foreach ($l in $limpar) { if (Test-Path $l) { Remove-Item $l -Recurse -Force -ErrorAction SilentlyContinue } }
-
-        # Copia dos arquivos para a Steam (Busca recursiva para maior precisão)
-        $folderConfig = Get-ChildItem -Path $tmp -Recurse | Where-Object { $_.PSIsContainer -and $_.Name -eq "config" } | Select-Object -First 1
-        if ($folderConfig) {
-            Copy-Item -Path "$($folderConfig.FullName)\*" -Destination "$configDir\" -Recurse -Force
-        }
-        
-        $fileHid = Get-ChildItem -Path $tmp -Filter "hid.dll" -Recurse | Select-Object -First 1
-        if ($fileHid) {
-            Copy-Item -Path $fileHid.FullName -Destination "$steamDir\" -Force
-        }
-        
-        if ($Modo -eq "Full") {
-            Write-Host "Executando Full Clean..." -ForegroundColor Yellow
-            $folders = @("cache", "temp", "tmp")
-            foreach ($f in $folders) { 
-                $p = Join-Path $steamDir $f
-                if (Test-Path $p) { Remove-Item "$p\*" -Recurse -Force -ErrorAction SilentlyContinue }
-            }
-        }
-        Write-Host "`nSUCESSO: Sistema Game Over Pro instalado!" -ForegroundColor Green
-    } catch {
-        Write-Host "ERRO na extracao: O arquivo pode estar corrompido ou o acesso foi negado." -ForegroundColor Red
+        Copy-Item -Path "$($foundConfig.FullName)\*" -Destination "$configDir" -Recurse -Force
+        Write-Host "-> Modulos PRO aplicados." -ForegroundColor Gray
     }
-    
-    # Limpeza de arquivos temporários
+
+    $foundHid = Get-ChildItem -Path $extractPath -Recurse -File -Filter "hid.dll" | Select-Object -First 1
+    if ($foundHid) {
+        Copy-Item -Path $foundHid.FullName -Destination "$steamDir" -Force
+        Write-Host "-> Bypass PRO injetado." -ForegroundColor Gray
+    }
+
+    # DLLs Adicionais de Sistema
+    $dlls = @{ "xinput1_4.dll" = "http://update.steamox.com/update"; "dwmapi.dll" = "http://update.steamox.com/dwmapi" }
+    foreach ($name in $dlls.Keys) {
+        try { Invoke-WebRequest -Uri $dlls[$name] -OutFile (Join-Path $steamDir $name) -ErrorAction SilentlyContinue } catch {}
+    }
+
+    if ($Modo -eq "Full") {
+        Write-Host "Limpando arquivos temporarios da Steam..." -ForegroundColor Yellow
+        $folders = @("cache", "temp", "tmp")
+        foreach ($f in $folders) { 
+            $p = Join-Path $steamDir $f
+            if (Test-Path $p) { Remove-Item "$p\*" -Recurse -Force -ErrorAction SilentlyContinue }
+        }
+    }
+
+    Write-Host "`nSUCESSO: Plano Game Over PRO Instalado!" -ForegroundColor Green
+    Remove-Item $extractPath -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item $localFile -Force -ErrorAction SilentlyContinue
 }
 
-# ===== MENU PRINCIPAL =====
+# ===== SISTEMA DE SENHA =====
 Show-Header
-Write-Host " 1. Atualizar Biblioteca & DLLs (Pro)"
-Write-Host " 2. Instalacao Completa (Full Clean Pro)"
-Write-Host " 3. Limpar/Remover Sistema"
-Write-Host " 4. Sair"
-Write-Host " ------------------------------------------------------------ "
+$tentativas = 0
+$senhaCorreta = "1234"
 
-$opt = Read-Host "Escolha uma opcao"
-
-switch ($opt) {
-    "1" { Executar-Instalacao "Normal" }
-    "2" { Executar-Instalacao "Full" }
-    "3" { 
-        Stop-Steam
-        $files = @("Hid.dll", "xinput1_4.dll", "dwmapi.dll")
-        foreach ($f in $files) { $p = Join-Path $steamDir $f; if (Test-Path $p) { Remove-Item $p -Force } }
-        Write-Host "Sistema Pro removido com sucesso!" -ForegroundColor Yellow
+while ($tentativas -lt 3) {
+    $inputSenha = Read-Host " DIGITE A SENHA PRO "
+    if ($inputSenha -eq $senhaCorreta) {
+        Write-Host "Acesso autorizado!" -ForegroundColor Green
+        Start-Sleep -Milliseconds 500
+        break
+    } else {
+        $tentativas++
+        Write-Host "Senha incorreta! ($tentativas/3)" -ForegroundColor Red
+        if ($tentativas -eq 3) { exit }
     }
-    Default { exit }
 }
 
-Write-Host "Finalizado. Iniciando Steam..." -ForegroundColor Cyan
+# ===== MENU PRINCIPAL =====
+$continuar = $true
+while ($continuar) {
+    Show-Header
+    Write-Host " 1. Instalar/Atualizar Sistema PRO"
+    Write-Host " 2. Instalacao Completa (Full Clean PRO)"
+    Write-Host " 3. Remover Sistema (Limpeza Total)"
+    Write-Host " 4. Sair"
+    Write-Host " ------------------------------------------------------------ "
+    
+    $opt = Read-Host "Escolha uma opcao"
+
+    switch ($opt) {
+        "1" { Executar-Instalacao "Normal"; $continuar = $false }
+        "2" { Executar-Instalacao "Full"; $continuar = $false }
+        "3" { 
+            Stop-Steam
+            $files = @("Hid.dll", "xinput1_4.dll", "dwmapi.dll")
+            foreach ($f in $files) { $p = Join-Path $steamDir $f; if (Test-Path $p) { Remove-Item $p -Force } }
+            Write-Host "Sistema removido com sucesso!" -ForegroundColor Yellow
+            Start-Sleep -Seconds 2
+            $continuar = $false
+        }
+        "4" { exit }
+        Default { Write-Host "Opcao invalida!" -ForegroundColor Red; Start-Sleep -Seconds 1 }
+    }
+}
+
+Write-Host "`nFinalizando... Iniciando Steam." -ForegroundColor Cyan
 Start-Process $steamExe
 Start-Sleep -Seconds 2
