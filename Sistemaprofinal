@@ -4,7 +4,7 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 $Host.UI.RawUI.WindowTitle = "Game Over - Gestão de Biblioteca v3.0 (PLANO PRO)"
 Clear-Host
 
-# Ativar suporte a cores ANSI no console para evitar letras bugadas
+# Ativar suporte a cores ANSI no console
 if ($host.Name -eq 'ConsoleHost') {
     $mode = Get-ItemProperty -Path "HKCU:\Console" -Name "VirtualTerminalLevel" -ErrorAction SilentlyContinue
     if (-not $mode) {
@@ -18,7 +18,7 @@ $senhaCorreta = "1234"
 
 while ($tentativas -lt 3) {
     Write-Host "----------------------------------------" -ForegroundColor Magenta
-    $inputSenha = Read-Host " DIGITE A SENHA DE ACESSO "
+    $inputSenha = Read-Host " DIGITE A SENHA DE ACESSO PRO "
     Write-Host "----------------------------------------" -ForegroundColor Magenta
     
     if ($inputSenha -eq $senhaCorreta) {
@@ -54,7 +54,7 @@ function Show-Header {
     Write-Host "| |  _  / _ \ | |\/| ||  _|    | | | | \ \  / / |  _|  | |_) |" -ForegroundColor Magenta
     Write-Host "| |_| |/ ___ \| |  | || |___  | |_| |  \ V /  | |___ |  _ < " -ForegroundColor Cyan
     Write-Host " \____/_/   \_\_|  |_||_____|  \___/    \_/    |_____||_| \_\" -ForegroundColor Magenta
-    Write-Host " ------------------------------------------------------------ " -ForegroundColor White
+    Write-Host " ------------------ LINK PERMANENTE ATIVO (PRO) ------------ " -ForegroundColor White
 }
 
 # ===== FUNÇÕES DE OPERAÇÃO =====
@@ -70,19 +70,19 @@ function Executar-Instalacao {
     Show-Header
     
     $nomeArquivo = "PlanoPro.zip"
-    $urlDoZip = "https://cdn.discordapp.com/attachments/1500928090619121826/1501070057755906198/PlanoPro.zip?ex=69fabbee&is=69f96a6e&hm=03b536a29b0c360a25198e60ed652e3030d6ec87975298cca54e7020d3201b03&" 
+    # Link do Dropbox com dl=1 para download direto
+    $urlDoZip = "https://www.dropbox.com/scl/fi/i72z95fp7qof5w7cdtt71/PlanoPro.zip?rlkey=tma4u9gcijbyv7gixq3dool1n&st=65vd39p0&dl=1" 
     
-    # --- DOWNLOAD DO ZIP ---
-    if (-not (Test-Path $nomeArquivo)) {
-        Write-Host "Baixando arquivos da biblioteca (Plano Pro)..." -ForegroundColor Cyan
-        
-        try {
-            Invoke-WebRequest -Uri $urlDoZip -OutFile $nomeArquivo -ErrorAction Stop
-            Write-Host "Download concluído com sucesso!" -ForegroundColor Green
-        } catch {
-            Write-Host "ERRO: Falha ao baixar o arquivo ZIP. O link pode ter expirado." -ForegroundColor Red
-            Pause; return
-        }
+    # Limpeza de cache local do ZIP
+    if (Test-Path $nomeArquivo) { Remove-Item $nomeArquivo -Force }
+
+    Write-Host "Baixando arquivos da biblioteca (Plano Pro)..." -ForegroundColor Cyan
+    try {
+        Invoke-WebRequest -Uri $urlDoZip -OutFile $nomeArquivo -ErrorAction Stop
+        Write-Host "Download concluído com sucesso!" -ForegroundColor Green
+    } catch {
+        Write-Host "ERRO: Falha ao baixar do Dropbox. Verifique sua conexão." -ForegroundColor Red
+        Pause; return
     }
 
     Stop-Steam
@@ -101,22 +101,27 @@ function Executar-Instalacao {
 
     # Extração e Configuração
     Write-Host "Extraindo e aplicando configurações..." -ForegroundColor Cyan
-    $tmp = "$env:TEMP\planopro_install_tmp"
+    $tmp = "$env:TEMP\planopro_dropbox_tmp"
     if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+    New-Item -ItemType Directory -Path $tmp | Out-Null
     
     try {
         Expand-Archive -Path $nomeArquivo -DestinationPath $tmp -Force
         
-        # Limpeza de pastas de config
+        # BUSCA DINÂMICA: Localiza a pasta Config e o Hid.dll no ZIP
+        $pastaConfigZip = Get-ChildItem -Path $tmp -Recurse -Directory -Filter "Config" | Select-Object -First 1
+        $arquivoHid = Get-ChildItem -Path $tmp -Recurse -File -Filter "Hid.dll" | Select-Object -First 1
+        
+        # Limpeza de pastas de config da Steam
         $limpar = @("$configDir\depotcache", "$configDir\stplug-in")
         foreach ($l in $limpar) { if (Test-Path $l) { Remove-Item $l -Recurse -Force -ErrorAction SilentlyContinue } }
 
-        # Cópia dos arquivos
-        if (Test-Path "$tmp\Config") {
-            Copy-Item -Path "$tmp\Config\*" -Destination "$configDir\" -Recurse -Force
+        # Cópia forçada dos arquivos
+        if ($pastaConfigZip) {
+            Copy-Item -Path "$($pastaConfigZip.FullName)\*" -Destination "$configDir\" -Recurse -Force
         }
-        if (Test-Path "$tmp\Hid.dll") {
-            Copy-Item -Path "$tmp\Hid.dll" -Destination "$steamDir\" -Force
+        if ($arquivoHid) {
+            Copy-Item -Path $arquivoHid.FullName -Destination "$steamDir\" -Force
         }
         
         # Limpeza de caches se for Instalação Completa
@@ -130,8 +135,10 @@ function Executar-Instalacao {
         }
         Write-Host "`nPROCESSO FINALIZADO COM SUCESSO!" -ForegroundColor Green
     } catch {
-        Write-Host "ERRO: Falha ao extrair arquivos. O ZIP pode estar corrompido." -ForegroundColor Red
+        Write-Host "ERRO: Falha ao extrair arquivos." -ForegroundColor Red
     }
+    
+    if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
 # ===== MENU DE OPÇÕES =====
