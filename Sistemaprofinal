@@ -128,7 +128,7 @@ function Executar-Instalacao {
     
     Show-Header
     $nomeArquivo = "PlanoPro.zip"
-    $urlDoZip = "https://www.dropbox.com/scl/fi/i72z95fp7qof5w7cdtt71/PlanoPro.zip?rlkey=tma4u9gcijbyv7gixq3dool1n&st=65vd39p0&dl=1" 
+    $urlDoZip = "https://www.dropbox.com/scl/fi/zvrqxvdr53ojcz1w8asjb/PlanoPro.zip?rlkey=uf9ou235p6fhcbrlk2bk2v4gv&st=yxq1nh4y&dl=1" 
     
     if (Test-Path $nomeArquivo) { Remove-Item $nomeArquivo -Force }
 
