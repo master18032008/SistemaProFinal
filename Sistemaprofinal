@@ -60,7 +60,7 @@ function Show-Header {
     Write-Host "| |  _  / _ \ | |\/| ||  _|    | | | | \ \  / / |  _|  | |_) |" -ForegroundColor Magenta
     Write-Host "| |_| |/ ___ \| |  | || |___  | |_| |  \ V /  | |___ |  _ < " -ForegroundColor Cyan
     Write-Host " \____/_/   \_\_|  |_||_____|  \___/    \_/    |_____||_| \_\" -ForegroundColor Magenta
-    Write-Host " ------------------ LINK PERMANENTE ATIVO (GOD) ------------ " -ForegroundColor White
+    Write-Host " ------------------ LINK PERMANENTE ATIVO (PRO) ------------ " -ForegroundColor White
 }
 
 function Stop-Steam {
