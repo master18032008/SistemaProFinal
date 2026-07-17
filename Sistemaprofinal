@@ -1,7 +1,7 @@
 # ===== CONFIGURAÇÃO DE AMBIENTE E CODIFICAÇÃO =====
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$Host.UI.RawUI.WindowTitle = "Game Over - Gestão de Biblioteca v3.0 (PLANO GOD - ATUALIZADO)"
+$Host.UI.RawUI.WindowTitle = "Game Over - Gestão de Biblioteca v3.0 (PLANO PRO - ATUALIZADO)"
 Clear-Host
 
 if ($host.Name -eq 'ConsoleHost') {
